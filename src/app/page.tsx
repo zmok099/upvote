@@ -62,7 +62,7 @@ export default function Home() {
         setMaxVotesDisplay(maxVotesInput);
         setDelayDisplay(`${delayInput} ms`);
 
-        if (!isVotingRef.current) { 
+        if (!isVotingRef.current) {
             displayMessage("Siap memulai voting. Masukkan URL, atur opsi, dan klik 'Mulai Voting'.", 'info');
         }
     }, [targetUrl, maxVotesInput, delayInput, displayMessage]);
@@ -74,15 +74,15 @@ export default function Home() {
         currentDelayParam: number
       ) => {
         if (!isVotingRef.current || votesSentCountRef.current >= currentMaxVotesParam) {
-            if (votesSentCountRef.current >= currentMaxVotesParam && isVotingRef.current) { 
+            if (votesSentCountRef.current >= currentMaxVotesParam && isVotingRef.current) {
                 displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
-            } else if (!isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam && isVotingState) { // Check isVotingState to confirm it was running
+            } else if (!isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam && isVotingState) { 
                 displayMessage("Proses voting dihentikan oleh pengguna.", 'info');
             }
-            setIsVotingState(false); 
+            setIsVotingState(false);
             return;
         }
-    
+
         try {
           const response = await fetch("https://commento.shngm.io/api/article?lang=en", {
             method: "POST",
@@ -95,10 +95,10 @@ export default function Home() {
               type: "reaction0",
             }),
           });
-    
+
           const text = await response.text();
           let data;
-    
+
           try {
             data = JSON.parse(text);
           } catch (parseError) {
@@ -109,26 +109,26 @@ export default function Home() {
             }
             return;
           }
-          
-          votesSentCountRef.current++; 
+
+          votesSentCountRef.current++;
           setVotesSent(votesSentCountRef.current);
           setShowVoteSentAnimation(true);
           setVotesSentAnimKey(prev => prev + 1);
-    
+
           const reactionData = data?.data?.[0]?.reaction0;
           if (reactionData !== undefined) {
             setCurrentReaction(reactionData.toString());
             setReactionAnimKey(prev => prev + 1);
           } else {
             console.warn(`Struktur respons tidak terduga untuk vote ${votesSentCountRef.current}:`, data);
-            setCurrentReaction('Error'); 
+            setCurrentReaction('Error');
             setReactionAnimKey(prev => prev + 1);
           }
-    
+
           if (votesSentCountRef.current >= currentMaxVotesParam) {
             displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
-            setIsVotingState(false); 
-            return; 
+            setIsVotingState(false);
+            return;
           }
 
           if (isVotingRef.current) {
@@ -142,12 +142,12 @@ export default function Home() {
           }
         }
       }, [displayMessage, setIsVotingState, setVotesSent, setCurrentReaction, isVotingState, setShowVoteSentAnimation, setVotesSentAnimKey, setReactionAnimKey]);
-      
+
 
     const handleStartStopVoting = useCallback(() => {
-        if (isVotingRef.current) { 
-            isVotingRef.current = false; 
-            setIsVotingState(false); 
+        if (isVotingRef.current) {
+            isVotingRef.current = false;
+            setIsVotingState(false);
             displayMessage("Meminta penghentian voting...", 'info');
             return;
         }
@@ -178,18 +178,18 @@ export default function Home() {
         setChapterIdDisplay(extractedId);
         setMaxVotesDisplay(maxVotesValue.toString());
         setDelayDisplay(`${delayValue} ms`);
-        
+
         votesSentCountRef.current = 0;
-        setVotesSent(0); 
+        setVotesSent(0);
         setShowVoteSentAnimation(false);
         setVotesSentAnimKey(prev => prev + 1);
         setCurrentReaction('N/A');
         setReactionAnimKey(prev => prev + 1);
         displayMessage("Memulai proses voting...", 'info');
-        
-        isVotingRef.current = true; 
-        setIsVotingState(true);     
-        
+
+        isVotingRef.current = true;
+        setIsVotingState(true);
+
         spamVoteCallback(extractedId, maxVotesValue, delayValue);
 
     }, [targetUrl, maxVotesInput, delayInput, displayMessage, spamVoteCallback, setIsVotingState, setVotesSent, setCurrentReaction, setChapterIdDisplay, setMaxVotesDisplay, setDelayDisplay, setShowVoteSentAnimation, setVotesSentAnimKey, setReactionAnimKey ]);
@@ -216,38 +216,38 @@ export default function Home() {
                     <div className="space-y-4">
                         <div>
                             <Label htmlFor="targetUrl" className="text-sm font-medium">URL Target</Label>
-                            <Input 
-                                type="text" 
-                                id="targetUrl" 
-                                placeholder="contoh: https://app.shinigami.asia/chapter/..." 
-                                value={targetUrl} 
-                                onChange={(e) => setTargetUrl(e.target.value)} 
-                                disabled={isVotingState} 
+                            <Input
+                                type="text"
+                                id="targetUrl"
+                                placeholder="contoh: https://app.shinigami.asia/chapter/..."
+                                value={targetUrl}
+                                onChange={(e) => setTargetUrl(e.target.value)}
+                                disabled={isVotingState}
                                 className="mt-1"
                             />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <Label htmlFor="maxVotesInput" className="text-sm font-medium">Jumlah Vote Maksimal</Label>
-                                <Input 
-                                    type="number" 
-                                    id="maxVotesInput" 
-                                    min="1" 
-                                    value={maxVotesInput} 
-                                    onChange={(e) => setMaxVotesInput(e.target.value)} 
-                                    disabled={isVotingState} 
+                                <Input
+                                    type="number"
+                                    id="maxVotesInput"
+                                    min="1"
+                                    value={maxVotesInput}
+                                    onChange={(e) => setMaxVotesInput(e.target.value)}
+                                    disabled={isVotingState}
                                     className="mt-1"
                                 />
                             </div>
                             <div>
                                 <Label htmlFor="delayInput" className="text-sm font-medium">Penundaan (ms per vote)</Label>
-                                <Input 
-                                    type="number" 
-                                    id="delayInput" 
-                                    min="100" 
-                                    value={delayInput} 
-                                    onChange={(e) => setDelayInput(e.target.value)} 
-                                    disabled={isVotingState} 
+                                <Input
+                                    type="number"
+                                    id="delayInput"
+                                    min="100"
+                                    value={delayInput}
+                                    onChange={(e) => setDelayInput(e.target.value)}
+                                    disabled={isVotingState}
                                     className="mt-1"
                                 />
                             </div>
@@ -261,19 +261,19 @@ export default function Home() {
                             <p>Penundaan Per Vote: <span className="font-semibold text-foreground">{delayDisplay}</span></p>
                         </CardContent>
                     </Card>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <Card className="text-center">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-lg text-muted-foreground">Vote Terkirim</CardTitle>
                             </CardHeader>
-                            <CardContent className="relative h-20"> {/* Added h-20 for consistent height */}
+                            <CardContent className="relative h-20">
                                 <span key={votesSentAnimKey} className="font-bold text-5xl text-primary animate-pop inline-block">
                                     {votesSent}
                                 </span>
                                 {showVoteSentAnimation && (
                                     <div
-                                        key={`falling-particle-${votesSentAnimKey}`} 
+                                        key={`falling-particle-${votesSentAnimKey}`}
                                         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/4 w-3 h-3 bg-primary rounded-full animate-fall-down-fade-out"
                                         onAnimationEnd={() => setShowVoteSentAnimation(false)}
                                     />
@@ -284,7 +284,7 @@ export default function Home() {
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-lg text-muted-foreground">Total Reaction0 Saat Ini</CardTitle>
                             </CardHeader>
-                            <CardContent className="h-20 flex items-center justify-center"> {/* Added h-20 and flex for consistent height & centering */}
+                            <CardContent className="h-20 flex items-center justify-center">
                                  <span key={reactionAnimKey} className="font-bold text-4xl text-accent animate-pop inline-block">
                                     {currentReaction}
                                 </span>
@@ -316,4 +316,3 @@ export default function Home() {
         </div>
     );
 }
-
