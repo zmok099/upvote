@@ -44,7 +44,7 @@ export default function Home() {
 
     const [votesSentAnimKey, setVotesSentAnimKey] = useState(0);
     const [reactionAnimKey, setReactionAnimKey] = useState(0);
-    const [showVoteSentAnimation, setShowVoteSentAnimation] = useState(false);
+    const [fallingVoteValue, setFallingVoteValue] = useState<{ key: number, value: number | string } | null>(null);
 
 
     useEffect(() => {
@@ -74,9 +74,10 @@ export default function Home() {
         currentDelayParam: number
       ) => {
         if (!isVotingRef.current || votesSentCountRef.current >= currentMaxVotesParam) {
-            if (votesSentCountRef.current >= currentMaxVotesParam && isVotingRef.current) {
+            if (votesSentCountRef.current >= currentMaxVotesParam && isVotingRef.current) { // Ensure it was voting before completion
                 displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
-            } else if (!isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam && isVotingState) { 
+            } else if (!isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam && isVotingState ) { 
+                // isVotingState helps confirm if the stop was intentional during an active session
                 displayMessage("Proses voting dihentikan oleh pengguna.", 'info');
             }
             setIsVotingState(false);
@@ -102,18 +103,22 @@ export default function Home() {
           try {
             data = JSON.parse(text);
           } catch (parseError) {
-            if (isVotingRef.current) {
+            if (isVotingRef.current) { // Check if still supposed to be voting
                 displayMessage(`Gagal: Respon tidak valid untuk vote percobaan ke-${votesSentCountRef.current + 1}.`, 'error');
                 console.warn(`❌ Error parsing response for vote attempt ${votesSentCountRef.current + 1}:`, parseError, "Full response:", text);
                 setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
             }
             return;
           }
+          
+          if (isVotingRef.current) { // Proceed only if still voting
+            setFallingVoteValue({ key: Date.now(), value: votesSent }); 
+          }
 
           votesSentCountRef.current++;
           setVotesSent(votesSentCountRef.current);
-          setShowVoteSentAnimation(true);
           setVotesSentAnimKey(prev => prev + 1);
+
 
           const reactionData = data?.data?.[0]?.reaction0;
           if (reactionData !== undefined) {
@@ -121,13 +126,14 @@ export default function Home() {
             setReactionAnimKey(prev => prev + 1);
           } else {
             console.warn(`Struktur respons tidak terduga untuk vote ${votesSentCountRef.current}:`, data);
-            setCurrentReaction('Error');
+            setCurrentReaction('Error'); // Keep currentReaction as string or number
             setReactionAnimKey(prev => prev + 1);
           }
+          
 
           if (votesSentCountRef.current >= currentMaxVotesParam) {
             displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
-            setIsVotingState(false);
+            setIsVotingState(false); // Stop voting
             return;
           }
 
@@ -135,23 +141,24 @@ export default function Home() {
             setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
           }
         } catch (err) {
-          if (isVotingRef.current) {
+          if (isVotingRef.current) { // Check if still supposed to be voting
             displayMessage(`Gagal: Error jaringan untuk vote percobaan ke-${votesSentCountRef.current + 1}.`, 'error');
             console.error(`❌ Network error sending vote attempt ${votesSentCountRef.current + 1}:`, err);
             setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
           }
         }
-      }, [displayMessage, setIsVotingState, setVotesSent, setCurrentReaction, isVotingState, setShowVoteSentAnimation, setVotesSentAnimKey, setReactionAnimKey]);
+      }, [ isVotingState, displayMessage, setIsVotingState, setVotesSent, setCurrentReaction, votesSent, setFallingVoteValue, setVotesSentAnimKey, setReactionAnimKey]);
 
 
     const handleStartStopVoting = useCallback(() => {
-        if (isVotingRef.current) {
-            isVotingRef.current = false;
-            setIsVotingState(false);
-            displayMessage("Meminta penghentian voting...", 'info');
+        if (isVotingRef.current) { // If voting, stop it
+            isVotingRef.current = false; // Signal to stop
+            setIsVotingState(false); // Update state to reflect UI change
+            // displayMessage("Meminta penghentian voting...", 'info'); // Message handled by spamVoteCallback exit
             return;
         }
 
+        // If not voting, start it
         const trimmedUrl = targetUrl.trim();
         if (!trimmedUrl) {
             displayMessage("❌ URL target tidak boleh kosong!", 'error');
@@ -179,20 +186,21 @@ export default function Home() {
         setMaxVotesDisplay(maxVotesValue.toString());
         setDelayDisplay(`${delayValue} ms`);
 
-        votesSentCountRef.current = 0;
-        setVotesSent(0);
-        setShowVoteSentAnimation(false);
-        setVotesSentAnimKey(prev => prev + 1);
-        setCurrentReaction('N/A');
-        setReactionAnimKey(prev => prev + 1);
-        displayMessage("Memulai proses voting...", 'info');
+        votesSentCountRef.current = 0; // Reset counter
+        setVotesSent(0);               // Reset UI display
+        setVotesSentAnimKey(prev => prev + 1); // Reset animation key for initial pop if any
+        setFallingVoteValue(null);     // Clear any previous falling number
+        setCurrentReaction('N/A');     // Reset reaction display
+        setReactionAnimKey(prev => prev + 1); // Reset reaction animation key
 
-        isVotingRef.current = true;
-        setIsVotingState(true);
+        displayMessage("Memulai proses voting...", 'info');
+        
+        isVotingRef.current = true;   // Signal to start
+        setIsVotingState(true);      // Update state for UI
 
         spamVoteCallback(extractedId, maxVotesValue, delayValue);
 
-    }, [targetUrl, maxVotesInput, delayInput, displayMessage, spamVoteCallback, setIsVotingState, setVotesSent, setCurrentReaction, setChapterIdDisplay, setMaxVotesDisplay, setDelayDisplay, setShowVoteSentAnimation, setVotesSentAnimKey, setReactionAnimKey ]);
+    }, [targetUrl, maxVotesInput, delayInput, displayMessage, spamVoteCallback, setIsVotingState, setVotesSent, setCurrentReaction, setChapterIdDisplay, setMaxVotesDisplay, setDelayDisplay, setFallingVoteValue, setVotesSentAnimKey, setReactionAnimKey ]);
 
     const getMessageColorClasses = () => {
         if (messageType === 'error') {
@@ -267,16 +275,18 @@ export default function Home() {
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-lg text-muted-foreground">Vote Terkirim</CardTitle>
                             </CardHeader>
-                            <CardContent className="relative h-20">
+                            <CardContent className="relative h-20 flex items-center justify-center overflow-hidden">
                                 <span key={votesSentAnimKey} className="font-bold text-5xl text-primary animate-pop inline-block">
                                     {votesSent}
                                 </span>
-                                {showVoteSentAnimation && (
-                                    <div
-                                        key={`falling-particle-${votesSentAnimKey}`}
-                                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/4 w-3 h-3 bg-primary rounded-full animate-fall-down-fade-out"
-                                        onAnimationEnd={() => setShowVoteSentAnimation(false)}
-                                    />
+                                {fallingVoteValue && (
+                                    <span
+                                        key={fallingVoteValue.key}
+                                        className="absolute font-bold text-5xl text-primary/80 animate-number-fall-shrink-fade"
+                                        onAnimationEnd={() => setFallingVoteValue(null)}
+                                    >
+                                        {fallingVoteValue.value}
+                                    </span>
                                 )}
                             </CardContent>
                         </Card>
@@ -301,6 +311,7 @@ export default function Home() {
                         onClick={handleStartStopVoting}
                         size="lg"
                         className="w-full md:w-1/2"
+                        // Button is always enabled, its behavior changes based on isVotingState
                     >
                         {isVotingState ? (
                             <>
