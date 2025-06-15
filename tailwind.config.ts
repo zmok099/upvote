@@ -98,8 +98,8 @@ export default {
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         'number-fall-shrink-fade': {
-          '0%': { opacity: '1', transform: 'translateY(0) scale(1)' },
-          '100%': { opacity: '0', transform: 'translateY(70px) scale(0.5)' },
+          '0%': { opacity: '1', transform: 'translate(-50%, -50%) scale(1)' }, /* Start centered */
+          '100%': { opacity: '0', transform: 'translate(calc(-50% + 30px), calc(-50% + 80px)) scale(0.5)' }, /* Move relative to center */
         },
       },
       animation: {
@@ -113,3 +113,4 @@ export default {
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
+
