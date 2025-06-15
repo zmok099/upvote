@@ -35,7 +35,9 @@ export default function Home() {
 
     const [isVotingState, setIsVotingState] = useState(false);
     const isVotingRef = useRef(isVotingState);
+    const votesSentCountRef = useRef(0);
 
+    // Effect to keep isVotingRef in sync with isVotingState
     useEffect(() => {
         isVotingRef.current = isVotingState;
     }, [isVotingState]);
@@ -45,32 +47,43 @@ export default function Home() {
         setMessageType(type);
     }, []);
 
+    // Effect to update display values when inputs change and set initial message
     useEffect(() => {
-        const initialChapterId = extractChapterId(targetUrl);
-        setChapterIdDisplay(initialChapterId || 'N/A');
+        const newChapterId = extractChapterId(targetUrl);
+        setChapterIdDisplay(newChapterId || 'N/A');
         setMaxVotesDisplay(maxVotesInput);
         setDelayDisplay(`${delayInput} ms`);
-        displayMessage("Siap memulai voting. Masukkan URL, atur opsi, dan klik 'Mulai Voting'.", 'info');
+
+        if (!isVotingRef.current) {
+            displayMessage("Siap memulai voting. Masukkan URL, atur opsi, dan klik 'Mulai Voting'.", 'info');
+        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [displayMessage, targetUrl, maxVotesInput, delayInput]);
+    }, [targetUrl, maxVotesInput, delayInput, displayMessage]);
 
 
     const spamVoteCallback = useCallback(async (
         currentChapterIdParam: string,
         currentMaxVotesParam: number,
-        currentDelayParam: number,
-        votesSentCountParamRef: React.MutableRefObject<number>
+        currentDelayParam: number
       ) => {
-        if (votesSentCountParamRef.current >= currentMaxVotesParam || !isVotingRef.current) {
-          if (votesSentCountParamRef.current >= currentMaxVotesParam) {
+        if (votesSentCountRef.current >= currentMaxVotesParam || !isVotingRef.current) {
+          const votingCompletedSuccessfully = isVotingRef.current && votesSentCountRef.current >= currentMaxVotesParam;
+          
+          setIsVotingState(false); // This will also update isVotingRef.current via useEffect
+          // isVotingRef.current = false; // Explicitly set here too for immediate effect if needed elsewhere
+
+          if (votingCompletedSuccessfully) {
             displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
+          } else if (!isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam && votesSentCountRef.current > 0) {
+            // User manually stopped, message handled by handleStartStopVoting
+            // displayMessage("Voting dihentikan oleh pengguna.", 'info'); // Optional: if specific message needed here
           }
-          setIsVotingState(false);
+          // If it stopped due to !isVotingRef.current and votesSentCountRef.current is 0, it means it was stopped before first vote
+          // or an error occurred before any successful vote. Message already set by handleStartStopVoting or error handler.
           return;
         }
     
-        // Update votesSent for display immediately (attempting vote N+1)
-        setVotesSent(votesSentCountParamRef.current + 1);
+        setVotesSent(prevVotes => prevVotes + 1); // Update display for the vote being attempted
     
         try {
           const response = await fetch("https://commento.shngm.io/api/article?lang=en", {
@@ -91,49 +104,56 @@ export default function Home() {
           try {
             data = JSON.parse(text);
           } catch (parseError) {
-            displayMessage(`Gagal: Respon tidak valid untuk vote ${votesSentCountParamRef.current + 1}.`, 'error');
-            console.warn(`❌ Error parsing response for vote ${votesSentCountParamRef.current + 1}:`, parseError, "Full response:", text);
+            displayMessage(`Gagal: Respon tidak valid untuk vote ${votesSentCountRef.current + 1}.`, 'error');
+            console.warn(`❌ Error parsing response for vote ${votesSentCountRef.current + 1}:`, parseError, "Full response:", text);
             if (isVotingRef.current) {
-              setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam, votesSentCountParamRef), currentDelayParam);
+              setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
+            } else {
+                setIsVotingState(false);
             }
             return;
           }
     
-          votesSentCountParamRef.current++; // Increment successful votes
-          // setVotesSent(votesSentCountParamRef.current); // Update display with actual successful count
+          votesSentCountRef.current++; // Increment successful votes only after success
+          // setVotesSent(votesSentCountRef.current); // To show actual successful count instead of attempted
     
           const reactionData = data?.data?.[0]?.reaction0;
           if (reactionData !== undefined) {
             setCurrentReaction(reactionData.toString());
           } else {
-            console.warn(`Struktur respons tidak terduga untuk vote ${votesSentCountParamRef.current}:`, data);
+            console.warn(`Struktur respons tidak terduga untuk vote ${votesSentCountRef.current}:`, data);
           }
     
-          if (isVotingRef.current && votesSentCountParamRef.current < currentMaxVotesParam) {
-            setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam, votesSentCountParamRef), currentDelayParam);
-          } else if (isVotingRef.current) {
+          if (isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam) {
+            setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
+          } else if (isVotingRef.current) { // Loop finished naturally
             displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
             setIsVotingState(false);
+            // isVotingRef.current = false; // Redundant due to useEffect
           }
         } catch (err) {
-          displayMessage(`Gagal: Error jaringan untuk vote ${votesSentCountParamRef.current + 1}.`, 'error');
-          console.error(`❌ Network error sending vote ${votesSentCountParamRef.current + 1}:`, err);
+          displayMessage(`Gagal: Error jaringan untuk vote ${votesSentCountRef.current + 1}.`, 'error');
+          console.error(`❌ Network error sending vote ${votesSentCountRef.current + 1}:`, err);
           if (isVotingRef.current) {
-            setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam, votesSentCountParamRef), currentDelayParam);
+            setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
+          } else {
+            // If stopped during an error, ensure state is reset
+            setIsVotingState(false);
+            // displayMessage("Voting dihentikan karena error dan permintaan pengguna.", 'info'); // Optional
           }
         }
       }, [displayMessage, setIsVotingState, setVotesSent, setCurrentReaction]);
       
 
-    const votesSentCountRef = useRef(0);
-
     const handleStartStopVoting = useCallback(() => {
-        if (isVotingRef.current) {
-            setIsVotingState(false); // Signal to stop
-            displayMessage("Meminta penghentian voting...", 'info');
+        if (isVotingRef.current) { // If currently voting, stop it
+            isVotingRef.current = false; // Signal the loop to stop
+            setIsVotingState(false);     // Update React state (triggers useEffect for ref, changes button text)
+            displayMessage("Proses voting dihentikan.", 'info');
             return;
         }
 
+        // --- Validation and setup before starting ---
         const trimmedUrl = targetUrl.trim();
         if (!trimmedUrl) {
             displayMessage("❌ URL target tidak boleh kosong!", 'error');
@@ -161,13 +181,15 @@ export default function Home() {
         setMaxVotesDisplay(maxVotesValue.toString());
         setDelayDisplay(`${delayValue} ms`);
         
-        votesSentCountRef.current = 0; // Reset counter for new session
+        votesSentCountRef.current = 0;
         setVotesSent(0); 
         setCurrentReaction('N/A');
         displayMessage("Memulai proses voting...", 'info');
-        setIsVotingState(true); // Set voting to true before first call
+        
+        isVotingRef.current = true; // Set ref immediately for the first call to spamVoteCallback
+        setIsVotingState(true);     // Set state to trigger UI changes and sync ref via useEffect
 
-        spamVoteCallback(extractedId, maxVotesValue, delayValue, votesSentCountRef);
+        spamVoteCallback(extractedId, maxVotesValue, delayValue);
 
     }, [targetUrl, maxVotesInput, delayInput, displayMessage, spamVoteCallback, setIsVotingState]);
 
@@ -183,7 +205,6 @@ export default function Home() {
     return (
         <>
             <style jsx global>{`
-                /* Using Tailwind for body bg and font, so body styles from original HTML are mostly covered */
                 .container-spammer {
                     background-color: #ffffff;
                     padding: 24px;
@@ -202,7 +223,7 @@ export default function Home() {
                     justify-content: center;
                     font-size: 0.9rem;
                 }
-                .spammer-button { /* Renamed to avoid conflict */
+                .spammer-button { 
                     transition: all 0.2s ease-in-out;
                     transform: scale(1);
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -214,12 +235,7 @@ export default function Home() {
                 .spammer-button:active {
                     transform: scale(0.98);
                 }
-                .spammer-button:disabled {
-                    opacity: 0.6 !important; 
-                    cursor: not-allowed !important;
-                    box-shadow: none !important;
-                }
-                .spammer-input { /* Renamed to avoid conflict */
+                .spammer-input { 
                     border: 1px solid #cbd5e0; /* slate-300 */
                     border-radius: 6px;
                     padding: 10px 12px;
@@ -234,23 +250,23 @@ export default function Home() {
                     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
                 }
             `}</style>
-            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100 p-5 font-body"> {/* Using slate-100 for #f1f5f9, close to #f0f4f8 */}
+            <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100 p-5 font-body">
                 <div className="container-spammer">
                     <h1 className="text-3xl font-extrabold text-gray-800 mb-6">Aplikasi Pengirim Vote</h1>
 
                     <div className="space-y-4 mb-6 text-left">
                         <div>
                             <label htmlFor="targetUrl" className="block text-gray-700 text-sm font-semibold mb-2">URL Target (contoh: https://app.shinigami.asia/chapter/...)</label>
-                            <input type="text" id="targetUrl" placeholder="Masukkan URL target di sini" className="spammer-input w-full" value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} />
+                            <input type="text" id="targetUrl" placeholder="Masukkan URL target di sini" className="spammer-input w-full" value={targetUrl} onChange={(e) => setTargetUrl(e.target.value)} disabled={isVotingState} />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label htmlFor="maxVotesInput" className="block text-gray-700 text-sm font-semibold mb-2">Jumlah Vote Maksimal</label>
-                                <input type="number" id="maxVotesInput" min="1" className="spammer-input w-full" value={maxVotesInput} onChange={(e) => setMaxVotesInput(e.target.value)} />
+                                <input type="number" id="maxVotesInput" min="1" className="spammer-input w-full" value={maxVotesInput} onChange={(e) => setMaxVotesInput(e.target.value)} disabled={isVotingState} />
                             </div>
                             <div>
                                 <label htmlFor="delayInput" className="block text-gray-700 text-sm font-semibold mb-2">Penundaan (ms per vote)</label>
-                                <input type="number" id="delayInput" min="100" className="spammer-input w-full" value={delayInput} onChange={(e) => setDelayInput(e.target.value)} />
+                                <input type="number" id="delayInput" min="100" className="spammer-input w-full" value={delayInput} onChange={(e) => setDelayInput(e.target.value)} disabled={isVotingState} />
                             </div>
                         </div>
                     </div>
@@ -278,19 +294,6 @@ export default function Home() {
                     <button
                         className="spammer-button mt-8 w-full md:w-auto px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
                         onClick={handleStartStopVoting}
-                        disabled={isVotingState && votesSentCountRef.current < parseInt(maxVotesInput,10)} // Disable button if voting is in progress (unless it's to stop)
-                                                                    // Enable when not voting, or when voting and it's time to stop.
-                                                                    // The button text implies its function. If "Menghentikan", it stops.
-                                                                    // So, it should be enabled if isVoting is true.
-                                                                    // Disabled only if starting operation is undergoing (not yet isVoting=true)
-                                                                    // Let's simplify: the button is only truly "busy" during the click handler's sync part.
-                                                                    // Original JS `startButton.disabled = true;` then `startButton.disabled = false;`
-                                                                    // This means it's disabled WHILE `spamVote` loop is active.
-                                                                    // My logic: `isVotingState` reflects if the loop is active.
-                                                                    // So, `disabled={isVotingState}` makes sense if the button text *doesn't* change to "Stop".
-                                                                    // But it *does* change. So it should be enabled to allow "Stop".
-                                                                    // Let's make it disabled only when an API call is pending or some other brief processing.
-                                                                    // For now, keep it enabled.
                     >
                         {isVotingState ? "Menghentikan Voting..." : "Mulai Voting"}
                     </button>
@@ -299,5 +302,3 @@ export default function Home() {
         </>
     );
 }
-
-    
