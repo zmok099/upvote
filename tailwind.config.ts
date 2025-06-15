@@ -97,10 +97,10 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(10px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
-        'shoot-right': {
-          '0%': { transform: 'translateX(-20px) scaleX(0.1)', opacity: '0.5' },
-          '50%': { transform: 'translateX(20px) scaleX(1)', opacity: '1' },
-          '100%': { transform: 'translateX(60px) scaleX(0.1)', opacity: '0' },
+        'fall-down-fade-out': {
+          '0%': { transform: 'translateY(-10px) scale(0.8)', opacity: '0.7' }, /* Start slightly above and smaller */
+          '50%': { transform: 'translateY(20px) scale(1)', opacity: '1' },   /* Fall down and become full size */
+          '100%': { transform: 'translateY(50px) scale(0.3)', opacity: '0' }, /* Continue falling, shrink and fade */
         }
       },
       animation: {
@@ -108,7 +108,7 @@ export default {
         'accordion-up': 'accordion-up 0.2s ease-out',
         'pop': 'pop 0.3s ease-out',
         'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
-        'shoot-right': 'shoot-right 0.6s ease-out forwards',
+        'fall-down-fade-out': 'fall-down-fade-out 0.6s ease-out forwards',
       },
     },
   },

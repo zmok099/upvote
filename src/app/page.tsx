@@ -76,7 +76,7 @@ export default function Home() {
         if (!isVotingRef.current || votesSentCountRef.current >= currentMaxVotesParam) {
             if (votesSentCountRef.current >= currentMaxVotesParam && isVotingRef.current) { 
                 displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
-            } else if (!isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam && isVotingState) {
+            } else if (!isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam && isVotingState) { // Check isVotingState to confirm it was running
                 displayMessage("Proses voting dihentikan oleh pengguna.", 'info');
             }
             setIsVotingState(false); 
@@ -267,14 +267,14 @@ export default function Home() {
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-lg text-muted-foreground">Vote Terkirim</CardTitle>
                             </CardHeader>
-                            <CardContent className="relative"> {/* Added position: relative */}
+                            <CardContent className="relative h-20"> {/* Added h-20 for consistent height */}
                                 <span key={votesSentAnimKey} className="font-bold text-5xl text-primary animate-pop inline-block">
                                     {votesSent}
                                 </span>
                                 {showVoteSentAnimation && (
                                     <div
-                                        key={`streak-${votesSentAnimKey}`} 
-                                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-1 bg-primary/70 rounded-full animate-shoot-right origin-center"
+                                        key={`falling-particle-${votesSentAnimKey}`} 
+                                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/4 w-3 h-3 bg-primary rounded-full animate-fall-down-fade-out"
                                         onAnimationEnd={() => setShowVoteSentAnimation(false)}
                                     />
                                 )}
@@ -284,7 +284,7 @@ export default function Home() {
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-lg text-muted-foreground">Total Reaction0 Saat Ini</CardTitle>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="h-20 flex items-center justify-center"> {/* Added h-20 and flex for consistent height & centering */}
                                  <span key={reactionAnimKey} className="font-bold text-4xl text-accent animate-pop inline-block">
                                     {currentReaction}
                                 </span>
