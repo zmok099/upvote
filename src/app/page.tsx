@@ -54,11 +54,11 @@ export default function Home() {
         setMaxVotesDisplay(maxVotesInput);
         setDelayDisplay(`${delayInput} ms`);
 
-        if (!isVotingRef.current) {
+        if (!isVotingRef.current) { // Only update if not actively voting
             displayMessage("Siap memulai voting. Masukkan URL, atur opsi, dan klik 'Mulai Voting'.", 'info');
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [targetUrl, maxVotesInput, delayInput, displayMessage]);
+    }, [targetUrl, maxVotesInput, delayInput]); // Removed displayMessage from deps as it's stable and caused loop with isVotingRef check
 
 
     const spamVoteCallback = useCallback(async (
@@ -66,21 +66,16 @@ export default function Home() {
         currentMaxVotesParam: number,
         currentDelayParam: number
       ) => {
-        if (votesSentCountRef.current >= currentMaxVotesParam || !isVotingRef.current) {
-          const votingCompletedSuccessfully = isVotingRef.current && votesSentCountRef.current >= currentMaxVotesParam;
-          
-          setIsVotingState(false); // This will also update isVotingRef.current via useEffect
-          // isVotingRef.current = false; // Explicitly set here too for immediate effect if needed elsewhere
-
-          if (votingCompletedSuccessfully) {
-            displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
-          } else if (!isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam && votesSentCountRef.current > 0) {
-            // User manually stopped, message handled by handleStartStopVoting
-            // displayMessage("Voting dihentikan oleh pengguna.", 'info'); // Optional: if specific message needed here
-          }
-          // If it stopped due to !isVotingRef.current and votesSentCountRef.current is 0, it means it was stopped before first vote
-          // or an error occurred before any successful vote. Message already set by handleStartStopVoting or error handler.
-          return;
+        // Condition to stop: User initiated stop OR max votes reached.
+        if (!isVotingRef.current || votesSentCountRef.current >= currentMaxVotesParam) {
+            if (isVotingRef.current && votesSentCountRef.current >= currentMaxVotesParam) {
+                // Voting completed successfully (max votes reached while still in "voting" mode)
+                displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
+                setIsVotingState(false); // Signal UI to update (e.g., button text, enable inputs)
+            }
+            // If !isVotingRef.current, it means user clicked "Menghentikan Voting...".
+            // In this case, handleStartStopVoting already set isVotingState to false and displayed a message.
+            return; // Exit the callback, stopping the loop.
         }
     
         setVotesSent(prevVotes => prevVotes + 1); // Update display for the vote being attempted
@@ -104,18 +99,16 @@ export default function Home() {
           try {
             data = JSON.parse(text);
           } catch (parseError) {
-            displayMessage(`Gagal: Respon tidak valid untuk vote ${votesSentCountRef.current + 1}.`, 'error');
-            console.warn(`❌ Error parsing response for vote ${votesSentCountRef.current + 1}:`, parseError, "Full response:", text);
+            // Check if still supposed to be voting before scheduling next attempt
             if (isVotingRef.current) {
-              setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
-            } else {
-                setIsVotingState(false);
+                displayMessage(`Gagal: Respon tidak valid untuk vote ${votesSentCountRef.current + 1}.`, 'error');
+                console.warn(`❌ Error parsing response for vote ${votesSentCountRef.current + 1}:`, parseError, "Full response:", text);
+                setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
             }
             return;
           }
     
-          votesSentCountRef.current++; // Increment successful votes only after success
-          // setVotesSent(votesSentCountRef.current); // To show actual successful count instead of attempted
+          votesSentCountRef.current++; 
     
           const reactionData = data?.data?.[0]?.reaction0;
           if (reactionData !== undefined) {
@@ -124,22 +117,19 @@ export default function Home() {
             console.warn(`Struktur respons tidak terduga untuk vote ${votesSentCountRef.current}:`, data);
           }
     
+          // Check again before scheduling next vote
           if (isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam) {
             setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
-          } else if (isVotingRef.current) { // Loop finished naturally
+          } else if (isVotingRef.current) { // Loop finished naturally (max votes reached)
             displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
             setIsVotingState(false);
-            // isVotingRef.current = false; // Redundant due to useEffect
           }
         } catch (err) {
-          displayMessage(`Gagal: Error jaringan untuk vote ${votesSentCountRef.current + 1}.`, 'error');
-          console.error(`❌ Network error sending vote ${votesSentCountRef.current + 1}:`, err);
+          // Check if still supposed to be voting before scheduling next attempt
           if (isVotingRef.current) {
+            displayMessage(`Gagal: Error jaringan untuk vote ${votesSentCountRef.current + 1}.`, 'error');
+            console.error(`❌ Network error sending vote ${votesSentCountRef.current + 1}:`, err);
             setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
-          } else {
-            // If stopped during an error, ensure state is reset
-            setIsVotingState(false);
-            // displayMessage("Voting dihentikan karena error dan permintaan pengguna.", 'info'); // Optional
           }
         }
       }, [displayMessage, setIsVotingState, setVotesSent, setCurrentReaction]);
@@ -148,7 +138,7 @@ export default function Home() {
     const handleStartStopVoting = useCallback(() => {
         if (isVotingRef.current) { // If currently voting, stop it
             isVotingRef.current = false; // Signal the loop to stop
-            setIsVotingState(false);     // Update React state (triggers useEffect for ref, changes button text)
+            setIsVotingState(false);     // Update React state (triggers useEffect for ref, changes button text, enables inputs)
             displayMessage("Proses voting dihentikan.", 'info');
             return;
         }
@@ -187,11 +177,11 @@ export default function Home() {
         displayMessage("Memulai proses voting...", 'info');
         
         isVotingRef.current = true; // Set ref immediately for the first call to spamVoteCallback
-        setIsVotingState(true);     // Set state to trigger UI changes and sync ref via useEffect
+        setIsVotingState(true);     // Set state to trigger UI changes (button text, disabled inputs) and sync ref via useEffect
 
         spamVoteCallback(extractedId, maxVotesValue, delayValue);
 
-    }, [targetUrl, maxVotesInput, delayInput, displayMessage, spamVoteCallback, setIsVotingState]);
+    }, [targetUrl, maxVotesInput, delayInput, displayMessage, spamVoteCallback, setIsVotingState, setVotesSent, setCurrentReaction, setChapterIdDisplay, setMaxVotesDisplay, setDelayDisplay]);
 
     const getMessageColorClasses = () => {
         if (messageType === 'error') {
@@ -249,6 +239,10 @@ export default function Home() {
                     border-color: #3b82f6; /* blue-500 */
                     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
                 }
+                .spammer-input:disabled {
+                    background-color: #f1f5f9; /* slate-100 */
+                    cursor: not-allowed;
+                }
             `}</style>
             <div className="flex flex-col items-center justify-center min-h-screen bg-slate-100 p-5 font-body">
                 <div className="container-spammer">
@@ -302,3 +296,4 @@ export default function Home() {
         </>
     );
 }
+
