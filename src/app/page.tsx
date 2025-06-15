@@ -33,7 +33,7 @@ export default function Home() {
     const [delayDisplay, setDelayDisplay] = useState("N/A");
 
     const [votesSent, setVotesSent] = useState(0);
-    const [currentReaction, setCurrentReaction] = useState("N/A");
+    const [currentReaction, setCurrentReaction] = useState<string | number>("N/A");
 
     const [messageText, setMessageText] = useState("Status: Masukkan URL dan klik Mulai Voting.");
     const [messageType, setMessageType] = useState<'info' | 'success' | 'error'>('info');
@@ -41,6 +41,10 @@ export default function Home() {
     const [isVotingState, setIsVotingState] = useState(false);
     const isVotingRef = useRef(isVotingState);
     const votesSentCountRef = useRef(0);
+
+    const [votesSentAnimKey, setVotesSentAnimKey] = useState(0);
+    const [reactionAnimKey, setReactionAnimKey] = useState(0);
+
 
     useEffect(() => {
         isVotingRef.current = isVotingState;
@@ -57,10 +61,10 @@ export default function Home() {
         setMaxVotesDisplay(maxVotesInput);
         setDelayDisplay(`${delayInput} ms`);
 
-        if (!isVotingRef.current) {
+        if (!isVotingRef.current) { // Only update if not currently voting
             displayMessage("Siap memulai voting. Masukkan URL, atur opsi, dan klik 'Mulai Voting'.", 'info');
         }
-    }, [targetUrl, maxVotesInput, delayInput]);
+    }, [targetUrl, maxVotesInput, delayInput, displayMessage]);
 
 
     const spamVoteCallback = useCallback(async (
@@ -69,14 +73,14 @@ export default function Home() {
         currentDelayParam: number
       ) => {
         if (!isVotingRef.current || votesSentCountRef.current >= currentMaxVotesParam) {
-            // This condition handles cases where voting was stopped externally or max votes were already reached before this call.
-            // Specific messages for completion/stoppage are handled where those actions originate (e.g., in handleStartStopVoting or after a successful vote hits max).
-            if (!isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam && isVotingState) {
-                 // If isVotingRef is false (stopped by user), but isVotingState is still true (UI hasn't updated yet)
-                 // and max votes not reached, ensure the global voting state is false.
-                setIsVotingState(false);
+            if (votesSentCountRef.current >= currentMaxVotesParam && isVotingRef.current) { // Ensure it was trying to vote
+                displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
+            } else if (!isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam && isVotingState) {
+                // This handles user stopping the process. isVotingState might still be true from previous render.
+                displayMessage("Proses voting dihentikan oleh pengguna.", 'info');
             }
-            return; 
+            setIsVotingState(false); // This will set isVotingRef.current to false via its useEffect
+            return;
         }
     
         try {
@@ -106,25 +110,26 @@ export default function Home() {
             return;
           }
           
-          // Successfully parsed response, increment actual sent count
           votesSentCountRef.current++; 
-          setVotesSent(votesSentCountRef.current); // Update UI with actual successful votes
+          setVotesSent(votesSentCountRef.current);
+          setVotesSentAnimKey(prev => prev + 1);
     
           const reactionData = data?.data?.[0]?.reaction0;
           if (reactionData !== undefined) {
             setCurrentReaction(reactionData.toString());
+            setReactionAnimKey(prev => prev + 1);
           } else {
             console.warn(`Struktur respons tidak terduga untuk vote ${votesSentCountRef.current}:`, data);
+            setCurrentReaction('Error'); // Indicate unexpected structure
+            setReactionAnimKey(prev => prev + 1);
           }
     
-          // Check if max votes reached AFTER this successful vote
           if (votesSentCountRef.current >= currentMaxVotesParam) {
             displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
-            setIsVotingState(false); // This will set isVotingRef.current to false via its useEffect
-            return; // Stop the voting process
+            setIsVotingState(false); 
+            return; 
           }
 
-          // If still voting and max votes not reached, schedule the next vote
           if (isVotingRef.current) {
             setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
           }
@@ -135,18 +140,18 @@ export default function Home() {
             setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
           }
         }
-      }, [displayMessage, setIsVotingState, setVotesSent, setCurrentReaction, isVotingState]); // Added isVotingState as it's read inside
+      }, [displayMessage, setIsVotingState, setVotesSent, setCurrentReaction, isVotingState]);
       
 
     const handleStartStopVoting = useCallback(() => {
-        if (isVotingRef.current) { // If currently voting, stop it
-            isVotingRef.current = false; 
-            setIsVotingState(false);     
-            displayMessage("Proses voting dihentikan.", 'info');
+        if (isVotingRef.current) { 
+            isVotingRef.current = false; // Signal to stop
+            setIsVotingState(false); // Update UI state
+            // Message will be set by spamVoteCallback when it stops
+            displayMessage("Meminta penghentian voting...", 'info');
             return;
         }
 
-        // --- Start new voting session ---
         const trimmedUrl = targetUrl.trim();
         if (!trimmedUrl) {
             displayMessage("❌ URL target tidak boleh kosong!", 'error');
@@ -176,13 +181,14 @@ export default function Home() {
         
         votesSentCountRef.current = 0;
         setVotesSent(0); 
+        setVotesSentAnimKey(prev => prev + 1);
         setCurrentReaction('N/A');
+        setReactionAnimKey(prev => prev + 1);
         displayMessage("Memulai proses voting...", 'info');
         
-        setIsVotingState(true); // This will trigger useEffect to set isVotingRef.current = true
-        // Directly call spamVoteCallback after state update has a chance to propagate
-        // or pass the necessary parameters immediately if preferred.
-        // Giving a slight delay for state to settle or just calling. For Genkit, direct call is fine.
+        isVotingRef.current = true; // Set ref immediately for spamVoteCallback
+        setIsVotingState(true);     // Set state for UI updates
+        
         spamVoteCallback(extractedId, maxVotesValue, delayValue);
 
     }, [targetUrl, maxVotesInput, delayInput, displayMessage, spamVoteCallback, setIsVotingState, setVotesSent, setCurrentReaction, setChapterIdDisplay, setMaxVotesDisplay, setDelayDisplay]);
@@ -198,7 +204,7 @@ export default function Home() {
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 md:p-8 font-body">
-            <Card className="w-full max-w-2xl shadow-xl">
+            <Card className="w-full max-w-2xl shadow-xl animate-fade-in-up">
                 <CardHeader>
                     <CardTitle className="text-3xl font-bold text-center">Aplikasi Pengirim Vote</CardTitle>
                     <CardDescription className="text-center">
@@ -261,7 +267,9 @@ export default function Home() {
                                 <CardTitle className="text-lg text-muted-foreground">Vote Terkirim</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <span className="font-bold text-5xl text-primary">{votesSent}</span>
+                                <span key={votesSentAnimKey} className="font-bold text-5xl text-primary animate-pop inline-block">
+                                    {votesSent}
+                                </span>
                             </CardContent>
                         </Card>
                         <Card className="text-center">
@@ -269,7 +277,9 @@ export default function Home() {
                                 <CardTitle className="text-lg text-muted-foreground">Total Reaction0 Saat Ini</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <span className="font-bold text-4xl text-accent">{currentReaction}</span>
+                                 <span key={reactionAnimKey} className="font-bold text-4xl text-accent animate-pop inline-block">
+                                    {currentReaction}
+                                </span>
                             </CardContent>
                         </Card>
                     </div>
@@ -283,6 +293,7 @@ export default function Home() {
                         onClick={handleStartStopVoting}
                         size="lg"
                         className="w-full md:w-1/2"
+                        // Button is always enabled; its behavior is determined by isVotingState
                     >
                         {isVotingState ? (
                             <>
@@ -298,4 +309,3 @@ export default function Home() {
         </div>
     );
 }
-
