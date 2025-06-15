@@ -16,19 +16,12 @@ export function SentimentDisplay({ sentimentData }: SentimentDisplayProps) {
   let IconComponent = AlertTriangle;
 
   if (sentiment?.toLowerCase().includes("positive")) {
-    badgeVariant = "default"; // Default is often green-ish or primary
+    badgeVariant = "default"; // 'default' variant uses primary color
     IconComponent = CheckCircle;
   } else if (sentiment?.toLowerCase().includes("negative")) {
     badgeVariant = "destructive";
     IconComponent = XCircle;
   }
-
-  // Custom styling for badges based on theme
-  const badgeStyle = (s: string) => {
-    if (s?.toLowerCase().includes("positive")) return "bg-green-500 hover:bg-green-600 text-white";
-    if (s?.toLowerCase().includes("negative")) return "bg-red-500 hover:bg-red-600 text-white";
-    return "bg-gray-500 hover:bg-gray-600 text-white";
-  };
 
 
   return (
@@ -44,7 +37,7 @@ export function SentimentDisplay({ sentimentData }: SentimentDisplayProps) {
       <CardContent className="text-sm space-y-1 pt-0 pb-3">
         <div className="flex items-center">
           <span className="font-medium mr-2">Sentiment:</span>
-          <Badge variant={badgeVariant} className={badgeStyle(sentiment)}>{sentiment || "N/A"}</Badge>
+          <Badge variant={badgeVariant}>{sentiment || "N/A"}</Badge>
         </div>
         <p><span className="font-medium">Confidence:</span> {(confidence * 100).toFixed(0)}%</p>
         <p><span className="font-medium">Reason:</span> {reason || "No reason provided."}</p>

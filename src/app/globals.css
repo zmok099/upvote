@@ -4,95 +4,99 @@
 
 @layer base {
   :root {
-    --background: 150 67% 97%; /* Pale light green #F0FAF5 */
-    --foreground: 150 20% 30%; /* Dark gray/green for text */
+    --background: 340 60% 97%; /* Very light pink */
+    --foreground: 340 10% 25%; /* Dark, slightly pinkish gray */
 
-    --card: 150 60% 99%; /* Slightly off main background */
-    --card-foreground: 150 20% 30%;
+    --card: 340 55% 99%; /* Very light pink, almost white */
+    --card-foreground: 340 10% 25%;
 
-    --popover: 150 60% 99%;
-    --popover-foreground: 150 20% 30%;
+    --popover: 340 55% 99%;
+    --popover-foreground: 340 10% 25%;
 
-    --primary: 160 50% 78%; /* Light moss green #A8E6CF */
-    --primary-foreground: 160 30% 25%; /* Darker green/gray for readability on primary */
+    --primary: 330 70% 75%; /* Soft, noticeable pink */
+    --primary-foreground: 330 40% 15%; /* Darker for text on primary */
 
-    --secondary: 0 33% 85%; /* Lighter dusty rose for secondary elements */
-    --secondary-foreground: 0 30% 25%;
+    --secondary: 335 65% 85%; /* Lighter, slightly more muted pink for secondary elements */
+    --secondary-foreground: 335 30% 25%;
 
-    --muted: 150 40% 90%; /* Muted green */
-    --muted-foreground: 150 20% 45%;
+    --muted: 340 40% 90%; /* Muted pink */
+    --muted-foreground: 340 10% 45%;
 
-    --accent: 0 33% 74%; /* Dusty rose #D4A5A5 */
-    --accent-foreground: 0 30% 25%; /* Darker dusty rose/gray for readability on accent */
+    --accent: 335 65% 80%; /* A lighter, slightly more muted pink than primary */
+    --accent-foreground: 335 30% 20%; /* Darker for text on accent */
 
-    --destructive: 0 60% 50%; /* A suitable red for destructive actions */
+    --destructive: 0 60% 50%; /* Standard red for destructive actions */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 150 30% 90%;
-    --input: 150 30% 88%;
-    --ring: 160 50% 78%; /* Primary color for rings */
+    --border: 340 30% 90%;
+    --input: 340 30% 88%;
+    --ring: 330 70% 75%; /* Primary color for rings */
 
     --radius: 0.5rem;
 
-    --chart-1: 160 60% 70%;
-    --chart-2: 0 40% 70%;
-    --chart-3: 40 60% 70%;
-    --chart-4: 200 60% 70%;
-    --chart-5: 280 60% 70%;
+    /* Monochromatic pink scale for charts */
+    --chart-1: 330 70% 70%;
+    --chart-2: 335 60% 75%;
+    --chart-3: 340 50% 80%;
+    --chart-4: 325 65% 65%;
+    --chart-5: 345 55% 85%;
 
-    --sidebar-background: 150 50% 95%;
-    --sidebar-foreground: 150 20% 25%;
-    --sidebar-primary: 160 50% 70%;
-    --sidebar-primary-foreground: 160 30% 20%;
-    --sidebar-accent: 0 33% 70%;
-    --sidebar-accent-foreground: 0 30% 20%;
-    --sidebar-border: 150 30% 88%;
-    --sidebar-ring: 160 50% 70%;
+    /* Sidebar colors */
+    --sidebar-background: 340 50% 96%;
+    --sidebar-foreground: 340 10% 20%;
+    --sidebar-primary: 330 65% 70%;
+    --sidebar-primary-foreground: 330 35% 15%;
+    --sidebar-accent: 335 60% 75%;
+    --sidebar-accent-foreground: 335 25% 18%;
+    --sidebar-border: 340 30% 88%;
+    --sidebar-ring: 330 65% 70%;
   }
 
   .dark {
-    --background: 150 20% 10%;
-    --foreground: 150 30% 90%;
+    --background: 340 15% 10%; /* Very dark desaturated pink */
+    --foreground: 340 40% 90%; /* Light pinkish gray */
 
-    --card: 150 20% 12%;
-    --card-foreground: 150 30% 90%;
+    --card: 340 15% 12%;
+    --card-foreground: 340 40% 90%;
 
-    --popover: 150 20% 12%;
-    --popover-foreground: 150 30% 90%;
+    --popover: 340 15% 12%;
+    --popover-foreground: 340 40% 90%;
 
-    --primary: 160 50% 68%;
-    --primary-foreground: 160 30% 15%;
+    --primary: 330 60% 65%; /* Pink, less bright */
+    --primary-foreground: 330 50% 15%;
 
-    --secondary: 0 33% 64%;
-    --secondary-foreground: 0 30% 95%;
+    --secondary: 335 55% 75%; /* Darker theme secondary pink */
+    --secondary-foreground: 335 40% 95%;
 
-    --muted: 150 20% 20%;
-    --muted-foreground: 150 30% 70%;
+    --muted: 340 15% 20%; /* Dark muted pink */
+    --muted-foreground: 340 30% 70%;
 
-    --accent: 0 33% 64%;
-    --accent-foreground: 0 30% 95%;
+    --accent: 335 55% 70%; /* Dark accent pink */
+    --accent-foreground: 335 40% 95%;
 
     --destructive: 0 50% 55%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 150 20% 25%;
-    --input: 150 20% 22%;
-    --ring: 160 50% 68%;
+    --border: 340 15% 25%;
+    --input: 340 15% 22%;
+    --ring: 330 60% 65%;
 
-    --chart-1: 160 50% 60%;
-    --chart-2: 0 40% 60%;
-    --chart-3: 40 50% 60%;
-    --chart-4: 200 50% 60%;
-    --chart-5: 280 50% 60%;
+    /* Dark theme chart colors */
+    --chart-1: 330 60% 60%;
+    --chart-2: 335 50% 65%;
+    --chart-3: 340 40% 70%;
+    --chart-4: 325 55% 55%;
+    --chart-5: 345 45% 75%;
     
-    --sidebar-background: 150 20% 15%;
-    --sidebar-foreground: 150 30% 85%;
-    --sidebar-primary: 160 50% 60%;
-    --sidebar-primary-foreground: 160 30% 10%;
-    --sidebar-accent: 0 33% 60%;
-    --sidebar-accent-foreground: 0 30% 90%;
-    --sidebar-border: 150 20% 20%;
-    --sidebar-ring: 160 50% 60%;
+    /* Dark Sidebar colors */
+    --sidebar-background: 340 15% 15%;
+    --sidebar-foreground: 340 40% 85%;
+    --sidebar-primary: 330 55% 60%;
+    --sidebar-primary-foreground: 330 45% 10%;
+    --sidebar-accent: 335 50% 65%;
+    --sidebar-accent-foreground: 335 35% 90%;
+    --sidebar-border: 340 15% 20%;
+    --sidebar-ring: 330 55% 60%;
   }
 }
 
