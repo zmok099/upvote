@@ -11,7 +11,6 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // Changed default fonts to Inter
         body: ['Inter', 'sans-serif'],
         headline: ['Inter', 'sans-serif'],
         code: ['monospace'],
@@ -98,14 +97,21 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(10px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        'shoot-right': {
+          '0%': { transform: 'translateX(-20px) scaleX(0.1)', opacity: '0.5' },
+          '50%': { transform: 'translateX(20px) scaleX(1)', opacity: '1' },
+          '100%': { transform: 'translateX(60px) scaleX(0.1)', opacity: '0' },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'pop': 'pop 0.3s ease-out',
         'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
+        'shoot-right': 'shoot-right 0.6s ease-out forwards',
       },
     },
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
+

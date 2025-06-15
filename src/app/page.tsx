@@ -44,6 +44,7 @@ export default function Home() {
 
     const [votesSentAnimKey, setVotesSentAnimKey] = useState(0);
     const [reactionAnimKey, setReactionAnimKey] = useState(0);
+    const [showVoteSentAnimation, setShowVoteSentAnimation] = useState(false);
 
 
     useEffect(() => {
@@ -61,7 +62,7 @@ export default function Home() {
         setMaxVotesDisplay(maxVotesInput);
         setDelayDisplay(`${delayInput} ms`);
 
-        if (!isVotingRef.current) { // Only update if not currently voting
+        if (!isVotingRef.current) { 
             displayMessage("Siap memulai voting. Masukkan URL, atur opsi, dan klik 'Mulai Voting'.", 'info');
         }
     }, [targetUrl, maxVotesInput, delayInput, displayMessage]);
@@ -73,13 +74,12 @@ export default function Home() {
         currentDelayParam: number
       ) => {
         if (!isVotingRef.current || votesSentCountRef.current >= currentMaxVotesParam) {
-            if (votesSentCountRef.current >= currentMaxVotesParam && isVotingRef.current) { // Ensure it was trying to vote
+            if (votesSentCountRef.current >= currentMaxVotesParam && isVotingRef.current) { 
                 displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
             } else if (!isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam && isVotingState) {
-                // This handles user stopping the process. isVotingState might still be true from previous render.
                 displayMessage("Proses voting dihentikan oleh pengguna.", 'info');
             }
-            setIsVotingState(false); // This will set isVotingRef.current to false via its useEffect
+            setIsVotingState(false); 
             return;
         }
     
@@ -112,6 +112,7 @@ export default function Home() {
           
           votesSentCountRef.current++; 
           setVotesSent(votesSentCountRef.current);
+          setShowVoteSentAnimation(true);
           setVotesSentAnimKey(prev => prev + 1);
     
           const reactionData = data?.data?.[0]?.reaction0;
@@ -120,7 +121,7 @@ export default function Home() {
             setReactionAnimKey(prev => prev + 1);
           } else {
             console.warn(`Struktur respons tidak terduga untuk vote ${votesSentCountRef.current}:`, data);
-            setCurrentReaction('Error'); // Indicate unexpected structure
+            setCurrentReaction('Error'); 
             setReactionAnimKey(prev => prev + 1);
           }
     
@@ -140,14 +141,13 @@ export default function Home() {
             setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
           }
         }
-      }, [displayMessage, setIsVotingState, setVotesSent, setCurrentReaction, isVotingState]);
+      }, [displayMessage, setIsVotingState, setVotesSent, setCurrentReaction, isVotingState, setShowVoteSentAnimation, setVotesSentAnimKey, setReactionAnimKey]);
       
 
     const handleStartStopVoting = useCallback(() => {
         if (isVotingRef.current) { 
-            isVotingRef.current = false; // Signal to stop
-            setIsVotingState(false); // Update UI state
-            // Message will be set by spamVoteCallback when it stops
+            isVotingRef.current = false; 
+            setIsVotingState(false); 
             displayMessage("Meminta penghentian voting...", 'info');
             return;
         }
@@ -181,17 +181,18 @@ export default function Home() {
         
         votesSentCountRef.current = 0;
         setVotesSent(0); 
+        setShowVoteSentAnimation(false);
         setVotesSentAnimKey(prev => prev + 1);
         setCurrentReaction('N/A');
         setReactionAnimKey(prev => prev + 1);
         displayMessage("Memulai proses voting...", 'info');
         
-        isVotingRef.current = true; // Set ref immediately for spamVoteCallback
-        setIsVotingState(true);     // Set state for UI updates
+        isVotingRef.current = true; 
+        setIsVotingState(true);     
         
         spamVoteCallback(extractedId, maxVotesValue, delayValue);
 
-    }, [targetUrl, maxVotesInput, delayInput, displayMessage, spamVoteCallback, setIsVotingState, setVotesSent, setCurrentReaction, setChapterIdDisplay, setMaxVotesDisplay, setDelayDisplay]);
+    }, [targetUrl, maxVotesInput, delayInput, displayMessage, spamVoteCallback, setIsVotingState, setVotesSent, setCurrentReaction, setChapterIdDisplay, setMaxVotesDisplay, setDelayDisplay, setShowVoteSentAnimation, setVotesSentAnimKey, setReactionAnimKey ]);
 
     const getMessageColorClasses = () => {
         if (messageType === 'error') {
@@ -266,10 +267,17 @@ export default function Home() {
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-lg text-muted-foreground">Vote Terkirim</CardTitle>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="relative"> {/* Added position: relative */}
                                 <span key={votesSentAnimKey} className="font-bold text-5xl text-primary animate-pop inline-block">
                                     {votesSent}
                                 </span>
+                                {showVoteSentAnimation && (
+                                    <div
+                                        key={`streak-${votesSentAnimKey}`} 
+                                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-1 bg-primary/70 rounded-full animate-shoot-right origin-center"
+                                        onAnimationEnd={() => setShowVoteSentAnimation(false)}
+                                    />
+                                )}
                             </CardContent>
                         </Card>
                         <Card className="text-center">
@@ -293,7 +301,6 @@ export default function Home() {
                         onClick={handleStartStopVoting}
                         size="lg"
                         className="w-full md:w-1/2"
-                        // Button is always enabled; its behavior is determined by isVotingState
                     >
                         {isVotingState ? (
                             <>
@@ -309,3 +316,4 @@ export default function Home() {
         </div>
     );
 }
+
