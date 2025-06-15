@@ -60,7 +60,6 @@ export default function Home() {
         if (!isVotingRef.current) {
             displayMessage("Siap memulai voting. Masukkan URL, atur opsi, dan klik 'Mulai Voting'.", 'info');
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [targetUrl, maxVotesInput, delayInput]);
 
 
@@ -70,14 +69,15 @@ export default function Home() {
         currentDelayParam: number
       ) => {
         if (!isVotingRef.current || votesSentCountRef.current >= currentMaxVotesParam) {
-            if (isVotingRef.current && votesSentCountRef.current >= currentMaxVotesParam) {
-                displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
-                setIsVotingState(false); 
+            // This condition handles cases where voting was stopped externally or max votes were already reached before this call.
+            // Specific messages for completion/stoppage are handled where those actions originate (e.g., in handleStartStopVoting or after a successful vote hits max).
+            if (!isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam && isVotingState) {
+                 // If isVotingRef is false (stopped by user), but isVotingState is still true (UI hasn't updated yet)
+                 // and max votes not reached, ensure the global voting state is false.
+                setIsVotingState(false);
             }
             return; 
         }
-    
-        setVotesSent(prevVotes => prevVotes + 1); 
     
         try {
           const response = await fetch("https://commento.shngm.io/api/article?lang=en", {
@@ -99,14 +99,16 @@ export default function Home() {
             data = JSON.parse(text);
           } catch (parseError) {
             if (isVotingRef.current) {
-                displayMessage(`Gagal: Respon tidak valid untuk vote ${votesSentCountRef.current + 1}.`, 'error');
-                console.warn(`❌ Error parsing response for vote ${votesSentCountRef.current + 1}:`, parseError, "Full response:", text);
+                displayMessage(`Gagal: Respon tidak valid untuk vote percobaan ke-${votesSentCountRef.current + 1}.`, 'error');
+                console.warn(`❌ Error parsing response for vote attempt ${votesSentCountRef.current + 1}:`, parseError, "Full response:", text);
                 setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
             }
             return;
           }
-    
+          
+          // Successfully parsed response, increment actual sent count
           votesSentCountRef.current++; 
+          setVotesSent(votesSentCountRef.current); // Update UI with actual successful votes
     
           const reactionData = data?.data?.[0]?.reaction0;
           if (reactionData !== undefined) {
@@ -115,30 +117,36 @@ export default function Home() {
             console.warn(`Struktur respons tidak terduga untuk vote ${votesSentCountRef.current}:`, data);
           }
     
-          if (isVotingRef.current && votesSentCountRef.current < currentMaxVotesParam) {
-            setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
-          } else if (isVotingRef.current) { 
+          // Check if max votes reached AFTER this successful vote
+          if (votesSentCountRef.current >= currentMaxVotesParam) {
             displayMessage("🎉 Semua vote berhasil terkirim!", 'success');
-            setIsVotingState(false);
+            setIsVotingState(false); // This will set isVotingRef.current to false via its useEffect
+            return; // Stop the voting process
+          }
+
+          // If still voting and max votes not reached, schedule the next vote
+          if (isVotingRef.current) {
+            setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
           }
         } catch (err) {
           if (isVotingRef.current) {
-            displayMessage(`Gagal: Error jaringan untuk vote ${votesSentCountRef.current + 1}.`, 'error');
-            console.error(`❌ Network error sending vote ${votesSentCountRef.current + 1}:`, err);
+            displayMessage(`Gagal: Error jaringan untuk vote percobaan ke-${votesSentCountRef.current + 1}.`, 'error');
+            console.error(`❌ Network error sending vote attempt ${votesSentCountRef.current + 1}:`, err);
             setTimeout(() => spamVoteCallback(currentChapterIdParam, currentMaxVotesParam, currentDelayParam), currentDelayParam);
           }
         }
-      }, [displayMessage, setIsVotingState, setVotesSent, setCurrentReaction]);
+      }, [displayMessage, setIsVotingState, setVotesSent, setCurrentReaction, isVotingState]); // Added isVotingState as it's read inside
       
 
     const handleStartStopVoting = useCallback(() => {
-        if (isVotingRef.current) { 
+        if (isVotingRef.current) { // If currently voting, stop it
             isVotingRef.current = false; 
             setIsVotingState(false);     
             displayMessage("Proses voting dihentikan.", 'info');
             return;
         }
 
+        // --- Start new voting session ---
         const trimmedUrl = targetUrl.trim();
         if (!trimmedUrl) {
             displayMessage("❌ URL target tidak boleh kosong!", 'error');
@@ -171,9 +179,10 @@ export default function Home() {
         setCurrentReaction('N/A');
         displayMessage("Memulai proses voting...", 'info');
         
-        isVotingRef.current = true; 
-        setIsVotingState(true);     
-
+        setIsVotingState(true); // This will trigger useEffect to set isVotingRef.current = true
+        // Directly call spamVoteCallback after state update has a chance to propagate
+        // or pass the necessary parameters immediately if preferred.
+        // Giving a slight delay for state to settle or just calling. For Genkit, direct call is fine.
         spamVoteCallback(extractedId, maxVotesValue, delayValue);
 
     }, [targetUrl, maxVotesInput, delayInput, displayMessage, spamVoteCallback, setIsVotingState, setVotesSent, setCurrentReaction, setChapterIdDisplay, setMaxVotesDisplay, setDelayDisplay]);
@@ -274,7 +283,6 @@ export default function Home() {
                         onClick={handleStartStopVoting}
                         size="lg"
                         className="w-full md:w-1/2"
-                        disabled={false} // Button is always enabled, logic handles start/stop
                     >
                         {isVotingState ? (
                             <>
@@ -290,3 +298,4 @@ export default function Home() {
         </div>
     );
 }
+
